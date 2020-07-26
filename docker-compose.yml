@@ -1,0 +1,61 @@
+version: "3.7"
+
+services:
+  proxy:
+    container_name: eshop-proxy
+    image: vgorlanov/eshop-proxy:dev
+    links:
+      - php
+    ports:
+      - "80:80"
+
+  php:
+    container_name: eshop-backend
+    image: vgorlanov/eshop-backend:prod
+    depends_on:
+      - db
+      - elastic
+
+  db:
+    image: vgorlanov/eshop-db
+    container_name: eshop-db
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=eshop
+
+  elastic:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.7.1
+    container_name: eshop-elastic
+    environment:
+      - node.name=es
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=es
+      - cluster.initial_master_nodes=es
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+
+  redis:
+    container_name: eshop-redis
+    image: redis:6.0-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    hostname: redis
+    volumes:
+      - rsdata:/data
+
+volumes:
+  dbdata:
+    driver: local
+  esdata:
+    driver: local
+  rsdata:
+    driver: local
